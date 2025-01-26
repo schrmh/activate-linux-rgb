@@ -1,5 +1,6 @@
 # activate-linux-rgb
 Won't maintain, just a quick thing added by Claude w/o cleaning up stuff it changed unnecessarily.
+Only tested on X11.
 
 
 https://github.com/user-attachments/assets/48d73663-c6b8-4273-9b0a-73d6739a87f3
