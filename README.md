@@ -1,4 +1,11 @@
-# activate-linux
+# activate-linux-rgb
+Won't maintain, just a quick thing added by Claude w/o cleaning up stuff it changed unnecessarily.
+
+
+https://github.com/user-attachments/assets/48d73663-c6b8-4273-9b0a-73d6739a87f3
+
+
+
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 The "Activate Windows" watermark ported to Linux with cairo in C
