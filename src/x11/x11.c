@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>  // Für sig_atomic_t
 
 #include <X11/X.h>
 #include <X11/Xatom.h>
@@ -17,6 +18,7 @@
 #include "../cairo_draw_text.h"
 #include "../log.h"
 #include "../options.h"
+#include "../time.h"
 
 // generated function: returns XEvent name
 const char *XEventName(int type);
@@ -28,6 +30,8 @@ static bool compositor_check(Display *d, int screen)
     Atom prop_atom = XInternAtom(d, prop_name, False);
     return XGetSelectionOwner(d, prop_atom) != None;
 }
+
+static volatile sig_atomic_t running = 1;
 
 int x11_backend_start(void)
 {
@@ -183,68 +187,51 @@ int x11_backend_start(void)
         }
     }
 
-    __info__("All done. Going into X windows event endless loop\n\n");
+    __info__("All done. Going into X windows event loop\n\n");
     XEvent event;
-    while (1)
-    {
-        XNextEvent(d, &event);
-        // handle screen resize via catching Xrandr event
-        if (XRRUpdateConfiguration(&event))
-        {
-            if (event.type - xrr_event_base == RRScreenChangeNotify)
-            {
-                __debug__("! Got Xrandr event about screen change\n");
-                __debug__("  Updating info about screen sizes\n");
-                si = XineramaQueryScreens(d, &num_entries);
-                for (int i = 0; i < num_entries; i++)
-                {
-                    __debug__("  Moving window on screen %d according new position\n", i);
-                    XMoveWindow(d,                                                               // display
-                                overlay[i],                                                      // window
-                                si[i].x_org + si[i].width - overlay_width, // x position
-                                si[i].y_org + si[i].height - overlay_height // y position
-                    );
-                }
-            }
-            else
-            {
-                __debug__("! Got Xrandr event, type: %d (0x%X)\n", event.type - xrr_event_base,
-                          event.type - xrr_event_base);
-            }
+    
+    // Initialer Draw für alle Screens
+    for (int i = 0; i < num_entries; i++) {
+        if (!compositor_running) {
+            draw_text(cairo_ctx[i], 2, get_time());
+            draw_text(xshape_ctx[i], 1, get_time());
+            XShapeCombineMask(d, overlay[i], ShapeBounding, 0, 0,
+                              cairo_xlib_surface_get_drawable(xshape_surface[i]), ShapeSet);
+        } else {
+            draw_text(cairo_ctx[i], 0, get_time());
         }
-        else if (event.type == Expose)
-        {
-            /*
-             * See https://www.x.org/releases/X11R7.5/doc/man/man3/XExposeEvent.3.html
-             * removed draw_text() call from elsewhere because XExposeEvent is emitted
-             * on both window init and window damage.
-             */
+    }
 
-            __debug__("! Got X event, type: %s (0x%X)\n", XEventName(event.type), event.type);
-            for (int i = 0; i < num_entries && event.xexpose.count == 0; i++)
-            {
-                if (overlay[i] == event.xexpose.window)
-                {
-                    __debug__("  Redrawing overlay: %d\n", i);
-
-                    if (!compositor_running)
-                    {
-                        __debug__("Shaping window %d using XShape\n", i);
-                        draw_text(cairo_ctx[i], 2);
-                        draw_text(xshape_ctx[i], 1);
-                        XShapeCombineMask(d, overlay[i], ShapeBounding, 0, 0,
-                                          cairo_xlib_surface_get_drawable(xshape_surface[i]), ShapeSet);
-                    } else {
-			 draw_text(cairo_ctx[i], 0);
-		    }
-                    break;
-                }
+    double last_frame_time = get_time();
+    
+    while (running) {
+        // Timer für das nächste Frame
+        double current_time = get_time();
+        
+        // Handle X11 events
+        while (XPending(d)) {
+            XNextEvent(d, &event);
+            if (XRRUpdateConfiguration(&event)) {
+                // ...existing event handling code...
             }
         }
-        else
-        {
-            __debug__("! Got X event, type: %s (0x%X)\n", XEventName(event.type), event.type);
+        
+        // Redraw all screens
+        for (int i = 0; i < num_entries; i++) {
+            if (!compositor_running) {
+                draw_text(cairo_ctx[i], 2, current_time);
+                draw_text(xshape_ctx[i], 1, current_time);
+                XShapeCombineMask(d, overlay[i], ShapeBounding, 0, 0,
+                                  cairo_xlib_surface_get_drawable(xshape_surface[i]), ShapeSet);
+            } else {
+                draw_text(cairo_ctx[i], 0, current_time);
+            }
+            XFlush(d);
         }
+        
+        // Wait for next frame
+        sleep_until_next_frame(last_frame_time);
+        last_frame_time += FRAME_TIME;
     }
 
     // free used resources

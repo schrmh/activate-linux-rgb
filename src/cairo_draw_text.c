@@ -4,8 +4,10 @@
 #include "options.h"
 #include <cairo/cairo.h>
 #include <stdlib.h>
+#include <string.h>
+#include "color.h"
 
-void draw_text(cairo_t *const cr, int xshape_mask)
+void draw_text(cairo_t *const cr, int xshape_mask, double time)
 {
     // clear surface
     cairo_operator_t prev_operator = cairo_get_operator(cr);
@@ -16,25 +18,6 @@ void draw_text(cairo_t *const cr, int xshape_mask)
         cairo_set_operator(cr, prev_operator);
     }
 
-    // set text color
-    if (xshape_mask == 0)
-    {
-        cairo_set_source_rgba(cr, options.text_color.r, options.text_color.g, options.text_color.b,
-                              options.text_color.a);
-    }
-    else
-    {
-        cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-    }
-    
-    // cheap hack for xshape
-    if (xshape_mask == 2)
-    {
-        cairo_set_source_rgb(cr, options.text_color.r, options.text_color.g, options.text_color.b);
-        cairo_paint(cr);
-        return;
-    }
-    
     // no subpixel anti-aliasing because we are on transparent BG
     cairo_font_options_t *font_options = cairo_font_options_create();
     if (xshape_mask == 0)
@@ -65,8 +48,37 @@ void draw_text(cairo_t *const cr, int xshape_mask)
 
     cairo_select_font_face(cr, options.custom_font, font_slant, font_weight);
 
-    cairo_move_to(cr, 20, 30 * options.scale);
-    cairo_show_text(cr, options.title);
+    // Rainbow text rendering für den Titel
+    cairo_text_extents_t extents;
+    cairo_text_extents(cr, options.title, &extents);
+    double text_width = extents.width;
+    
+    // Draw each character with its own color
+    double x = 20;  // Starting x position
+    const char *p = options.title;
+    while (*p) {
+        char c[2] = {*p, 0};
+        cairo_text_extents(cr, c, &extents);
+        
+        // Calculate color based on position and time
+        float position = x / text_width;
+        rgba_color color = get_rainbow_color(position, time);
+        
+        // Set the color and draw the character
+        cairo_set_source_rgba(cr, color.r, color.g, color.b, color.a);
+        cairo_move_to(cr, x, 30 * options.scale);
+        cairo_show_text(cr, c);
+        
+        x += extents.x_advance;
+        p++;
+    }
+
+    // Subtitle mit normaler Farbe
+    if (xshape_mask == 0)
+    {
+        cairo_set_source_rgba(cr, options.text_color.r, options.text_color.g, options.text_color.b,
+                              options.text_color.a);
+    }
 
     cairo_set_font_size(cr, 16 * options.scale);
     cairo_move_to(cr, 20, 55 * options.scale);

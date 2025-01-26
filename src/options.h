@@ -27,6 +27,7 @@ typedef struct options_t {
 #ifdef X11
   bool force_xshape;
 #endif
+  char *text;  // Add this line for the display text
 } Options;
 
 extern Options options;

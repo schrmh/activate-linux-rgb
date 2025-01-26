@@ -18,6 +18,7 @@
 #include "../cairo_draw_text.h"
 #include "../options.h"
 #include "../log.h"
+#include "../time.h"  // Füge time.h hinzu
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
@@ -125,7 +126,7 @@ static void frame_commit(struct output *output)
 
     float orig_scale = options.scale;
     options.scale *= output->scale;
-    draw_text(cairo, 0);
+    draw_text(cairo, 0, get_time());  // Aktualisiert mit time Parameter
     options.scale = orig_scale;
 
     wl_surface_set_buffer_scale(output->surface, output->scale);

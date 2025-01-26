@@ -42,4 +42,25 @@ rgba_color rgba_color_new(float r, float g, float b, float a);
  */
 rgba_color rgba_color_string(char *const src);
 
+/**
+ * Converts HSL color to RGB color.
+ *
+ * @param h The hue value.
+ * @param s The saturation value.
+ * @param l The lightness value.
+ *
+ * @returns A new rgba_color with the corresponding RGB values.
+ */
+rgba_color hsl_to_rgb(float h, float s, float l);
+
+/**
+ * Gets a rainbow color based on position and time.
+ *
+ * @param position The position value.
+ * @param time The time value.
+ *
+ * @returns A new rgba_color with the corresponding rainbow color.
+ */
+rgba_color get_rainbow_color(float position, float time);
+
 #endif

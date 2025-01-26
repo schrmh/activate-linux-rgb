@@ -3,7 +3,7 @@ CC ?= cc
 # compile options
 CFLAGS ?= -Os -Wall -Wpedantic -Wextra
 # link options
-LDFLAGS ?= -s
+LDFLAGS ?= -s -lm
 
 # install path is: $(DESTDIR)$(PREFIX)/$(BINDIR)/$(BINARY)
 DESTDIR ?=
